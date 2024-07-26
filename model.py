@@ -6,7 +6,7 @@ from sklearn.preprocessing import MinMaxScaler
 
 def load_data(file_path):
     data = pd.read_csv(file_path)
-    return data
+    return data[:5000]
 
 def preprocess_data(data):
     scaler = MinMaxScaler(feature_range=(0, 1))
@@ -40,10 +40,3 @@ def train_model(model, x_train, y_train):
 def predict(model, x_test):
     predictions = model.predict(x_test)
     return predictions
-
-# Example usage
-# data = load_data('data/stock_prices.csv')
-# x, y, scaler = preprocess_data(data)
-# model = create_model((x.shape[1], 1))
-# model = train_model(model, x, y)
-# predictions = predict(model, x_test)
