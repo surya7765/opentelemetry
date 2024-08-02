@@ -1,51 +1,69 @@
 from opentelemetry import metrics
-from opentelemetry.sdk.metrics import MeterProvider, Counter, Histogram, ObservableGauge
-from opentelemetry.sdk.resources import Resource
-from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
 from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import OTLPMetricExporter
-from opentelemetry.semconv.resource import ResourceAttributes
+from opentelemetry.sdk.metrics import MeterProvider as SDKMeterProvider, ObservableGauge
+from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
+from opentelemetry.sdk.resources import Resource
 import psutil
-import random
+import time
 
 # Set up resources
 resource = Resource(attributes={
-    ResourceAttributes.SERVICE_NAME: "my-fastapi-service"
+    "service.name": "mlass",
+    "service.version": "1.0.0",
+    "service.instance.id": "instance-1"
 })
 
-# Metrics setup
-otlp_exporter = OTLPMetricExporter(endpoint="http://localhost:4317", insecure=True)
-metric_reader = PeriodicExportingMetricReader(otlp_exporter)
-meter_provider = MeterProvider(resource=resource, metric_readers=[metric_reader])
-metrics.set_meter_provider(meter_provider)
-meter = metrics.get_meter(__name__)
+# Configure OpenTelemetry Metrics
+metric_exporter = OTLPMetricExporter(endpoint="http://localhost:4318", insecure=True)
+metric_reader = PeriodicExportingMetricReader(metric_exporter)
+metrics_provider = SDKMeterProvider(resource=resource, metric_readers=[metric_reader])
+metrics.set_meter_provider(metrics_provider)
+meter = metrics.get_meter_provider().get_meter(__name__)
 
-# Define metrics
-response_time_histogram = meter.create_histogram("http.server.duration", unit="ms", description="Response time of HTTP requests")
-api_calls_counter = meter.create_counter("api.calls", unit="1", description="Number of API calls")
-unique_users_counter = meter.create_counter("unique.users", unit="1", description="Number of unique users")
+# Observable gauges for CPU and Memory utilization
+def cpu_usage_observable(options: metrics.CallbackOptions):
+    return [metrics.Observation(value=psutil.cpu_percent(interval=None))]
 
-# Define observable gauges
-def record_resource_utilization(callback_options):
-    cpu_usage = psutil.cpu_percent()
-    memory_usage = psutil.virtual_memory().used
-    # Yield values as a single tuple
-    yield (cpu_usage,)
-    yield (memory_usage,)
+def memory_usage_observable(options: metrics.CallbackOptions):
+    return [metrics.Observation(value=psutil.virtual_memory().percent)]
 
-def record_prediction_accuracy(callback_options):
-    accuracy = random.random()  # Simulate accuracy
-    # Yield values as a single tuple
-    yield (accuracy,)
+# Create observable gauges
+meter.create_observable_gauge(
+    "cpu_usage",
+    callbacks=[cpu_usage_observable],
+    description="CPU Usage",
+    unit="percent"
+)
 
-# Register observable gauges with callbacks
-meter.create_observable_gauge("resource.cpu_usage", callbacks=[record_resource_utilization])
-meter.create_observable_gauge("resource.memory_consumption", callbacks=[record_resource_utilization])
-meter.create_observable_gauge("model.prediction_accuracy", callbacks=[record_prediction_accuracy])
+meter.create_observable_gauge(
+    "memory_usage",
+    callbacks=[memory_usage_observable],
+    description="Memory Usage",
+    unit="percent"
+)
 
-def record_metrics(request, result):
-    response_time = random.randint(50, 200)  # Example: Simulate response time
-    response_time_histogram.record(response_time)
-    api_calls_counter.add(1)
+# Track API Calls, Latency, and Errors
+performance_counter = meter.create_counter("api_calls", description="Count of API calls")
+latency_histogram = meter.create_histogram("api_latency", description="Latency of API calls")
+error_counter = meter.create_counter("api_errors", description="Count of API errors")
 
-def setup_metrics():
-    meter_provider.start()
+def record_api_call():
+    performance_counter.add(1)
+
+def track_latency(start_time):
+    end_time = time.time()
+    latency = end_time - start_time
+    latency_histogram.record(latency)
+
+def record_error():
+    error_counter.add(1)
+
+def collect_metrics():
+    metrics_data = {
+        "cpu_usage": psutil.cpu_percent(interval=None),
+        "memory_usage": psutil.virtual_memory().percent,
+        "api_calls": performance_counter,
+        "api_latency": latency_histogram,
+        "api_errors": error_counter
+    }
+    return metrics_data
