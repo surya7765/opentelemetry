@@ -1,0 +1,37 @@
+filebeat.inputs:
+- type: container
+  paths:
+    - /var/lib/docker/containers/*/*.log
+  processors:
+    - add_host_metadata: ~
+    - add_cloud_metadata: ~
+    - add_docker_metadata: ~
+
+output.elasticsearch:
+  hosts: ["http://elasticsearch:9200"]
+  username: "elastic"
+  password: "elastic"
+  bulk_max_size: 4096
+  worker: 2
+  pipeline: "filebeat-pipeline"  # Customize this if you have specific pipelines
+
+setup.kibana:
+  host: "http://kibana:5601/"
+  username: "elastic"
+  password: "elastic"
+
+logging.level: info
+logging.to_files: true
+logging.files:
+  path: /var/log/filebeat
+  name: filebeat.log
+  keepfiles: 7
+  permissions: 0644
+
+setup.template.settings:
+  index.number_of_shards: 1
+  index.codec: best_compression
+
+setup.ilm.enabled: auto
+setup.ilm.rollover_alias: "filebeat"
+setup.ilm.pattern: "{now/d}-000001"

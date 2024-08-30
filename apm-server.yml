@@ -1,0 +1,47 @@
+apm-server:
+  host: "apm-server:8200"
+
+setup.template.settings:
+  index:
+    number_of_shards: 1
+    codec: best_compression
+    
+setup.kibana:
+  host: "http://kibana:5601"
+  username: "elastic"
+  password: "elastic"
+
+output.elasticsearch:
+  hosts: ["http://elasticsearch:9200"]
+  username: "elastic"
+  password: "elastic"
+
+indices:
+  - index: "apm-%{[observer.version]}-sourcemap"
+    when.contains:
+      processor.event: "sourcemap"
+  - index: "apm-%{[observer.version]}-error-%{+yyyy.MM.dd}"
+    when.contains:
+      processor.event: "error"
+  - index: "apm-%{[observer.version]}-transaction-%{+yyyy.MM.dd}"
+    when.contains:
+      processor.event: "transaction"
+  - index: "apm-%{[observer.version]}-span-%{+yyyy.MM.dd}"
+    when.contains:
+      processor.event: "span"
+
+apm-server.rum:
+  enabled: true
+  allow_origins: ["*"]
+  source_mapping:
+    enabled: true
+    cache:
+      expiration: 5m
+
+
+monitoring:
+  enabled: true
+  elasticsearch:
+    hosts: ["http://elasticsearch:9200"]
+    username: "elastic"
+    password: "elastic"

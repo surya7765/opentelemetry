@@ -1,0 +1,60 @@
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: "0.0.0.0:4317"
+      http:
+        endpoint: "0.0.0.0:4318"
+
+processors:
+  batch:
+
+exporters:
+  logging:
+    loglevel: debug
+
+  otlphttp:
+    endpoint: "http://otel-collector:4318"
+    tls:
+      insecure: true
+  
+  otlp:
+    endpoint: "http://otel-collector:4317"
+    tls:
+      insecure: true
+
+  elasticsearch/metrics:
+    endpoint: "http://elasticsearch:9200"
+    index: "otel-metrics"
+    tls:
+      insecure: true
+
+  elasticsearch/logs:
+    endpoint: "http://elasticsearch:9200"
+    index: "otel-logs"
+    tls:
+      insecure: true
+
+  elasticsearch/trace:
+    endpoint: "http://elasticsearch:9200"
+    index: "otel-traces"
+    tls:
+      insecure: true
+  
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [logging, elasticsearch/trace]
+
+    metrics:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [logging, elasticsearch/metrics]
+
+    logs:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [logging, elasticsearch/logs]
