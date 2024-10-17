@@ -1,68 +1,46 @@
-from opentelemetry import metrics
-from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import OTLPMetricExporter
-from opentelemetry.sdk.metrics import MeterProvider as SDKMeterProvider, ObservableGauge
-from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
-from opentelemetry.sdk.resources import Resource
+from prometheus_client import start_http_server, Gauge, Counter, Histogram
 import psutil
 import time
 
-# Set up resources
-resource = Resource(attributes={
-    "service.name": "devs",
-    "service.version": "1.0.0",
-})
+# Step 1: Define Prometheus Metrics
+cpu_usage_gauge = Gauge("cpu_usage", "CPU Usage Percentage")
+memory_usage_gauge = Gauge("memory_usage", "Memory Usage Percentage")
+api_calls_counter = Counter("api_calls", "Total number of API calls made")
+api_errors_counter = Counter("api_errors", "Total number of errors encountered")
+api_latency_histogram = Histogram("api_latency", "Latency of API calls in seconds")
 
-# Configure OpenTelemetry Metrics
-metric_exporter = OTLPMetricExporter(endpoint="http://localhost:4318", insecure=True)
-metric_reader = PeriodicExportingMetricReader(metric_exporter)
-metrics_provider = SDKMeterProvider(resource=resource, metric_readers=[metric_reader])
-metrics.set_meter_provider(metrics_provider)
-meter = metrics.get_meter_provider().get_meter(__name__)
+# Step 2: Define functions to update metrics
+def update_system_metrics():
+    """Updates the CPU and memory usage metrics."""
+    cpu_usage = psutil.cpu_percent(interval=None)
+    memory_usage = psutil.virtual_memory().percent
 
-# Observable gauges for CPU and Memory utilization
-def cpu_usage_observable(options: metrics.CallbackOptions):
-    return [metrics.Observation(value=psutil.cpu_percent(interval=None))]
-
-def memory_usage_observable(options: metrics.CallbackOptions):
-    return [metrics.Observation(value=psutil.virtual_memory().percent)]
-
-# Create observable gauges
-meter.create_observable_gauge(
-    "cpu_usage",
-    callbacks=[cpu_usage_observable],
-    description="CPU Usage",
-    unit="percent"
-)
-
-meter.create_observable_gauge(
-    "memory_usage",
-    callbacks=[memory_usage_observable],
-    description="Memory Usage",
-    unit="percent"
-)
-
-# Track API Calls, Latency, and Errors
-performance_counter = meter.create_counter("api_calls", description="Count of API calls")
-latency_histogram = meter.create_histogram("api_latency", description="Latency of API calls")
-error_counter = meter.create_counter("api_errors", description="Count of Error in API")
+    cpu_usage_gauge.set(cpu_usage)
+    memory_usage_gauge.set(memory_usage)
 
 def record_api_call():
-    performance_counter.add(1)
-
-def track_latency(start_time):
-    end_time = time.time()
-    latency = end_time - start_time
-    latency_histogram.record(latency)
+    """Increments the API calls counter."""
+    api_calls_counter.inc()
 
 def record_error():
-    error_counter.add(1)
+    """Increments the API errors counter."""
+    api_errors_counter.inc()
 
-def collect_metrics():
-    metrics_data = {
-        "cpu_usage": psutil.cpu_percent(interval=None),
-        "memory_usage": psutil.virtual_memory().percent,
-        "api_calls": performance_counter,
-        "api_latency": latency_histogram,
-        "api_errors": error_counter
-    }
-    return metrics_data
+def track_latency(start_time):
+    """Records the latency of an API call."""
+    latency = time.time() - start_time
+    api_latency_histogram.observe(latency)
+
+# Step 3: Start Prometheus metrics server
+if __name__ == "__main__":
+    # Start the Prometheus metrics server on port 8000
+    start_http_server(8000)
+    print("Prometheus metrics available at http://localhost:8000/metrics")
+
+    # Continuously update system metrics
+    try:
+        while True:
+            update_system_metrics()
+            time.sleep(5)  # Update metrics every 5 seconds
+    except KeyboardInterrupt:
+        print("Shutting down...")
