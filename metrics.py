@@ -8,9 +8,8 @@ import time
 
 # Set up resources
 resource = Resource(attributes={
-    "service.name": "mlass",
+    "service.name": "devs",
     "service.version": "1.0.0",
-    "service.instance.id": "instance-1"
 })
 
 # Configure OpenTelemetry Metrics
@@ -45,7 +44,7 @@ meter.create_observable_gauge(
 # Track API Calls, Latency, and Errors
 performance_counter = meter.create_counter("api_calls", description="Count of API calls")
 latency_histogram = meter.create_histogram("api_latency", description="Latency of API calls")
-error_counter = meter.create_counter("api_errors", description="Count of API errors")
+error_counter = meter.create_counter("api_errors", description="Count of Error in API")
 
 def record_api_call():
     performance_counter.add(1)
