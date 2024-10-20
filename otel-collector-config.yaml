@@ -9,6 +9,9 @@ receivers:
 exporters:
   logging:
     loglevel: debug
+  otlp:
+    endpoint: "http://localhost:4317"
+
 
 service:
   pipelines:
