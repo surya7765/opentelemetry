@@ -6,7 +6,3 @@ opentelemetry-api
 opentelemetry-sdk
 opentelemetry-instrumentation-flask
 opentelemetry-exporter-zipkin
-psutil
-prometheus_client
-scikit-learn
-fastapi
