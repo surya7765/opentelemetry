@@ -1,5 +1,5 @@
 from flask import Flask, request, jsonify
-from metrics import update_system_metrics
+from metrics import collect_metrics
 from model import load_data, preprocess_data, create_model, train_model, predict
 
 app = Flask(__name__)
@@ -25,7 +25,7 @@ def make_prediction():
 
 @app.route("/metrics", methods=["GET"])
 def get_metrics():
-    metrics_data = update_system_metrics()
+    metrics_data = collect_metrics()
     return jsonify({"Event": "/fetch", "Metrics": metrics_data})
 
 if __name__ == "__main__":
