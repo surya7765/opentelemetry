@@ -31,12 +31,12 @@ def track_latency(start_time):
     latency = time.time() - start_time
     api_latency_histogram.observe(latency)
 
+
 # Step 3: Start Prometheus metrics server
 if __name__ == "__main__":
-    # Start the Prometheus metrics server on port 8000
-    start_http_server(8000)
-    print("Prometheus metrics available at http://localhost:8000/metrics")
-
+    # Start the Prometheus metrics server on a different port, e.g., 8001
+    start_http_server(8001)
+    print("Prometheus metrics available at http://localhost:8001/metrics")
     # Continuously update system metrics
     try:
         while True:
